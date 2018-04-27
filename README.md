@@ -97,6 +97,8 @@ Get the container ID by running:
 
 **4. Rub dockernymous**
 
+Open dockernymous.sh with your favorite editor and update the actual names of your images.
+
 Everything should be set up now.
 Run Dockernymus (from the host) as root or with sudo:
 
