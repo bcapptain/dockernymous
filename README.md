@@ -95,7 +95,7 @@ Get the container ID by running:
 
     $ docker ps -a
 
-**4. Rub dockernymous**
+**4. Run dockernymous**
 
 Open dockernymous.sh with your favorite editor and update the actual names of your images.
 
