@@ -1,8 +1,15 @@
 #!/bin/bash
 
-## SET Gateway IP & Image Name
-_gwIP=192.168.0.254
-_gwName=deb_gw
+## SET Gateway IP & Image Name #########
+_gwIP=192.168.0.254 
+_gwName=my_gateway
+
+## SET Workstation name ################
+_wsName=my_workstation
+
+## Internal Network
+_intNW=docker_internal
+
 
 ########################################
 white="\033[1;37m"
@@ -30,21 +37,35 @@ DNSListenAddress $_gwIP"
 #########################################
 
 
-## Internal Network
-_intNW=docker_internal
-## Cleanup
-docker stop $(docker ps -qa) > /dev/null
-rm log
+####### Cleanup #########################
+# Is Docker Daemon running?
+docker ps > /dev/null 
+if [ $? -ne 0 ]; then
+	printf "\n$red%s$transparent\n" "[Could not connect to the docker daemon...]"
+	exit 1
+fi
+
+# If there are any stopped containers, delete them
+if [ "$(docker ps -a | grep "$_gwName\|$_wsName")" != "" ]; then
+	printf "\n%s$transparent\n" "[Found previously used Containers - deleting...]"
+	docker stop $(docker ps -a | grep "my_gateway\|debian" | awk '{ print$1 }') > /dev/null
+fi
+rm log 2> /dev/null
 
 ########## Start a Containainer from the Gateway Image ##########
 
 printf "\n$white%s$transparent\n" "Starting a Gateway Container..."
-_gwID=$(docker run -it --rm --privileged -d $_gwName)
-echo "ID: $_gwID"
-echo -e "$green[Success]$transparent"
+_gwID=$(docker run -it --rm --privileged -d $_gwName) 
 
+if [ "$_gwID" != "" ]; then
+	printf "\n%s\n" "Container started with ID: $_gwID"
+	printf "\n$green%s$transparent\n" "[Success!]"
+else
+	printf "\n$red%s$transparent\n" "[Error getting Container ID. See above errors!]"
+	exit 1
+fi
 
-########### Connect Container to internal Network ##########
+########### Connect Container to internal Network ################
 
 printf "\n$white%s$transparent\n" "Connecting internal Network..."
 docker network connect --ip $_gwIP $_intNW $_gwID
@@ -58,18 +79,38 @@ echo -e "$green[Success]$transparent"
 
  printf "\n$white%s$transparent\n" "Starting Tor within our newly created Container..."
 docker exec -it -d $_gwID sh -c "echo '$_torSettings' >> /etc/tor/torrc"
-docker exec -it -d $_gwID pkill tor
+docker exec -it -d $_gwID sh -c "pkill tor"
 sleep 1
-docker exec -t -d $_gwID sh -c "tor > log"
+docker exec -it -d $_gwID sh -c "tor > log"
 sleep 2
 test="test"
+declare -i timeout
+declare -i try
+timeout=0
+try=0
+
+function checkconnection {
 while [ "$test" !=  "100%" ]
 do
 	docker exec -it $_gwID bash -c "cat log" >> log
 	test=$(tail -n1 log | awk '{ print $6 }' | cut -d':' -f1)
-	printf "%s\r" "Connection Status: $test"
+	printf "%s\n" "Connection Status: $test"
 	sleep 0.5
+	timeout+=1
+#	echo $timeout
+	if [ $timeout -eq 10 ]; then
+		printf "%s\n" "Connection timeout. Retry.."
+		try+=1
+		docker exec -it -d $_gwID sh -c "pkill tor"
+		sleep 1
+		docker exec -it -d $_gwID sh -c "tor > log"
+		sleep 2
+		timeout=0
+	fi
 done
+}
+checkconnection
+
 printf "\n$green%s$transparent\n" "[Success]"
 
 
@@ -81,7 +122,7 @@ _trans_port="9040"
 #internal interface name
 _inc_if="eth1"
 # exlude from Tor
-_NON_TOR="192.168.0.0/24"
+_NON_TOR="192.168.0.0/24 172.18.0.0/16"
 docker exec -it $_gwID bash -c "iptables -F"
 docker exec -it $_gwID bash -c "iptables -t nat -F"
 for NET in $NON_TOR; do
@@ -96,7 +137,12 @@ echo -e "$green[Success]$transparent"
 ########## Start Workstation Container ##############
 
 printf "\n$white%s$transparent\n" "Starting a Workstaion Container..."
-_wsID=$(docker run -it --rm --privileged --net=docker_internal -e USER=root -d kali_ws)
+_wsID=$(docker run -it --rm --privileged --net=docker_internal -e USER=root -d $_wsName)
+
+if [ $? -ne 0 ]; then
+	printf "\n$red%s$transparent\n" "[Error starting Workstation - is the name correct?]"
+	exit 1
+fi
 
 ## Get the IP of the newly created Container
 _wsIP=$(docker exec -it $_wsID bash -c "ip a | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'")

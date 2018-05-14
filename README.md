@@ -78,6 +78,7 @@ Get an image for the Workstation. For example, Kali Linux for penetration testin
 Update and install the tools you would like to use (see
 [https://www.kali.org/news/kali-linux-metapackages/](https://www.kali.org/news/kali-linux-metapackages/))
 
+    $ docker run -it --privileged kalilinux/kali-linux-docker /bin/bash
     $ apt-get update
     $ apt-get dist-upgrade
     $ apt-get autoremove
@@ -85,7 +86,15 @@ Update and install the tools you would like to use (see
     $ apt install kali-linux-top10
     $ apt-get clean
 
-Make sure vncserver package is installed which is the case with most Kali Metapackages.
+Make sure the tightvncserver and curl packages are installed which is the case with most Kali Metapackages.
+
+    $ apt-get install tightvncserver
+    $ apt-get install curl
+
+Install xfce4 for a graphical Desktop:
+
+    $ apt-get install xfce4 
+    $ exit
 
 As with the Gateway, to make this permanent you have to create an image from that customized container. Each time you run dockernymous a new container is created and disposed on exit.
 
@@ -95,19 +104,23 @@ Get the container ID by running:
 
     $ docker ps -a
 
-**4. Rub dockernymous**
+**4. Run dockernymous**
+Open dockernymous.sh with your favorite editor and update the actual names of your images.
+
+Everything should be set up by now. Run Dockernymus (from the host) as root or with sudo:
 
 Everything should be set up now.
 Run Dockernymus (from the host) as root or with sudo:
 
     $ sudo bash dockernymous.sh
 
- or mark it executable:
+ or mark it executable once:
  ‎
 
     $ chmod +x dockernymous.sh 
 
-and run it:
+and always run it with:
 
     $ ./dockernymous.sh
+
 
