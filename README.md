@@ -116,7 +116,7 @@ Everything should be set up by now. Run Dockernymus (from the host) as root or w
 
  or mark it executable once:
  ‎
-    $ cd dockernymous
+
     $ chmod +x dockernymous.sh 
 
 and always run it with:
