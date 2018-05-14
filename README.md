@@ -81,9 +81,9 @@ Update and install the tools you would like to use (see
     $ docker run -it --privileged kalilinux/kali-linux-docker /bin/bash
     $ apt-get update
     $ apt-get dist-upgrade
-    $ apt-get autoremove
     
     $ apt install kali-linux-top10
+    $ apt-get autoremove
     $ apt-get clean
 
 Make sure the tightvncserver and curl packages are installed which is the case with most Kali Metapackages.
