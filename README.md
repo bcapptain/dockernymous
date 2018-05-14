@@ -7,6 +7,8 @@ Dockernymous is in a very early state of development. Only use it for educationa
 
 Dockernymous is a start script for Docker that runs and configures two individual Linux containers in order act as a anonymisation workstation-gateway set up.
 
+It's aimed at security professionals and pentesters. 
+
 The gateway container acts as a Anonymizing Middlebox (see
 [https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy)) and routes ALL traffic from the workstation container through the Tor Network.
 
@@ -105,18 +107,16 @@ Get the container ID by running:
     $ docker ps -a
 
 **4. Run dockernymous**
-Open dockernymous.sh with your favorite editor and update the actual names of your images.
+
+Open dockernymous.sh with your favorite editor and update the actual names of your images if you did not use the suggestions above.
 
 Everything should be set up by now. Run Dockernymus (from the host) as root or with sudo:
-
-Everything should be set up now.
-Run Dockernymus (from the host) as root or with sudo:
 
     $ sudo bash dockernymous.sh
 
  or mark it executable once:
  ‎
-
+    $ cd dockernymous
     $ chmod +x dockernymous.sh 
 
 and always run it with:
