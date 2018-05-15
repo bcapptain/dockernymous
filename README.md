@@ -7,7 +7,7 @@ Dockernymous is in a very early state of development. Only use it for educationa
 
 Dockernymous is a start script for Docker that runs and configures two individual Linux containers in order act as a anonymisation workstation-gateway set up.
 
-It' aimed towards experienced Linux/Docker users, security professionals and penetration testers!
+It's aimed towards experienced Linux/Docker users, security professionals and penetration testers!
 
 The gateway container acts as a Anonymizing Middlebox (see
 [https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy)) and routes ALL traffic from the workstation container through the Tor Network.
