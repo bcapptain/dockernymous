@@ -7,6 +7,8 @@ Dockernymous is in a very early state of development. Only use it for educationa
 
 Dockernymous is a start script for Docker that runs and configures two individual Linux containers in order act as a anonymisation workstation-gateway set up.
 
+It' aimed towards experienced Linux/Docker users, security professionals and penetration testers!
+
 The gateway container acts as a Anonymizing Middlebox (see
 [https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy)) and routes ALL traffic from the workstation container through the Tor Network.
 
@@ -19,11 +21,16 @@ systems which aren't able to efficiently run two hardware  virtualized machines 
 **Host (Linux):**
 - docker
 - vncviewer
+- xterm
+- curl
 
 **Gateway Image:**
- - Linux (e.g. Debian)
+- Linux (e.g. Debian)
 - tor
--  iptables
+- xtightvnc
+- procps
+- ncat
+- iptables
 
 **Workstation Image:**
  - Linux (e.g. Kali)
@@ -52,9 +59,9 @@ Run the image, update the distro, install iptables & tor:
 
     $ apt-get update
     $ apt-get dist-upgrade
-    $ apt-get autoremove
-    
+        
     $ apt-get install tor iptables procps netcat
+    $ apt-get autoremove
     $ apt-get clean
     $ exit
 
