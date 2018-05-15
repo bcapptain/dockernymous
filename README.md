@@ -7,8 +7,6 @@ Dockernymous is in a very early state of development. Only use it for educationa
 
 Dockernymous is a start script for Docker that runs and configures two individual Linux containers in order act as a anonymisation workstation-gateway set up.
 
-It's aimed at security professionals and pentesters. 
-
 The gateway container acts as a Anonymizing Middlebox (see
 [https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy](https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy)) and routes ALL traffic from the workstation container through the Tor Network.
 
@@ -56,7 +54,7 @@ Run the image, update the distro, install iptables & tor:
     $ apt-get dist-upgrade
     $ apt-get autoremove
     
-    $ apt-get install tor iptables
+    $ apt-get install tor iptables procps netcat
     $ apt-get clean
     $ exit
 
@@ -83,9 +81,9 @@ Update and install the tools you would like to use (see
     $ docker run -it --privileged kalilinux/kali-linux-docker /bin/bash
     $ apt-get update
     $ apt-get dist-upgrade
+    $ apt-get autoremove
     
     $ apt install kali-linux-top10
-    $ apt-get autoremove
     $ apt-get clean
 
 Make sure the tightvncserver and curl packages are installed which is the case with most Kali Metapackages.
@@ -107,10 +105,12 @@ Get the container ID by running:
     $ docker ps -a
 
 **4. Run dockernymous**
-
-Open dockernymous.sh with your favorite editor and update the actual names of your images if you did not use the suggestions above.
+Open dockernymous.sh with your favorite editor and update the actual names of your images.
 
 Everything should be set up by now. Run Dockernymus (from the host) as root or with sudo:
+
+Everything should be set up now.
+Run Dockernymus (from the host) as root or with sudo:
 
     $ sudo bash dockernymous.sh
 

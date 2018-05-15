@@ -29,6 +29,9 @@ transparent="\e[0m"
 ########################################
 # ANONYMIZING MIDDLEBOX SETTINGS
 _torSettings="VirtualAddrNetworkIPv4 10.192.0.0/10
+ControlPort 9051
+CookieAuthentication 1
+HashedControlPassword 16:0430F4846DCB79EB605DAB188CF619860A18B86C20D075B84CB97E0695
 AutomapHostsOnResolve 1
 TransPort 9040 
 TransListenAddress $_gwIP
@@ -210,15 +213,14 @@ revisit=0
 
 function menu {
 	clear
-	if [ "$revisit" = "1" ]; then
-		clear
-	fi
-
+	
 	printf "\n\n$white%s$transparent\n\n" "What shall we do next?" 
-	printf "%s\n" "Start a Terminal Session .......(t)"
-	printf "%s\n" "Start a VNC Session ............(v)"
-	printf "%s\n" "Check Connection ...............(c)" 
-	printf "%s\n" "Quit and clean up ..............(q)" 
+	printf "%s\t%s\t%s\n" "[Workstation]" "Start a Terminal Session" "(t)"
+	printf "%s\t%s\t\t%s\n" "[Workstation]" "Start a VNC Session" "(v)"
+	printf "%s\t%s\t%s\n" "[Gateway]" "Start a Terminal Session" "(g)" 
+	printf "%s\t%s\t\t\t%s\n" "[System]" "New Identity" "(n)"
+	printf "%s\t%s\t\t%s\n" "[System]" "Check Connection" "(c)"
+	printf "%s\t%s\t\t%s\n" "[System]" "Quit and clean up" "(q)" 
 
 
 }
@@ -227,29 +229,58 @@ function menu {
 	do
 		menu
 		printf "\n\n%s" ""
+		printf "%s" "Enter: "
 		read choice
+			## Connect to work station terminal
 			if [ "$choice" = "t" ]; then
 				clear
 				printf "\n$white%s$transparent\n" "Connecting to Workstation Terminal.. (type 'exit' to return to menu)"
 	        		sleep 1
 				docker exec -it -e USER=root $_wsID /bin/bash
-			        revisit=1
+			        
 			fi
+			## Start and connect workstation VNC
 			if [ "$choice" = "v" ]; then
 				clear
 				printf "\n$white%s$transparent\n" "Starting VNC Server in Workstation... (close vncviewer to return to menu)"
-	        		sleep 1
-				docker exec -it -e USER=root $_wsID vncpasswd
-				docker exec -it -e USER=root $_wsID su -c "vncserver :2" root
-				vncviewer $_wsIP:2
-				docker exec -it -e USER=root $_wsID su -c "vncserver -kill :2" root
-			        revisit=1
+	        	sleep 1
+				_checkvnc=$(docker exec -it -e USER=root $_wsID bash -c "ps -e | grep Xtightvnc")
+				
+				if [ "$_checkvnc" = "" ]; then
+					docker exec -it -e USER=root $_wsID vncpasswd
+					docker exec -it -e USER=root $_wsID su -c "vncserver :2" root
+				fi
+				## We start the vncviewer in a seperate xterm because theres no way to run it in the background
+				xterm -e "vncviewer $_wsIP:2" &
+				
+				#docker exec -it -e USER=root $_wsID su -c "vncserver -kill :2" root
+			        
 			fi
+			## Check Connection
 			if [ "$choice" = "c" ]; then
 				printf "\n\n%s" ""
 				checkip
 				printf "\n%s" "Press any key..."
-
+				read p
+			fi
+			
+			## New identity via ControlPort
+			if [ "$choice" = "n" ]; then
+				printf "\n$white%s$transparent\n" "Getting new identity..."
+				docker exec -it $_gwID bash -c "(echo authenticate '""'; echo signal newnym; echo quit) | nc localhost 9051"
+				checkip
+				printf "\n%s" "Press any key..."
+				read p
+			fi
+			
+			
+			## connect to gateway terminal
+			if [ "$choice" = "g" ]; then
+				clear
+				printf "\n$white%s$transparent\n" "Connecting to Gateway Terminal.. (type 'exit' to return to menu)"
+	        		sleep 1
+				docker exec -it -e USER=root $_gwID /bin/bash
+			        
 			fi
 
 	
@@ -257,28 +288,14 @@ function menu {
 
 
 
-########## Start a VNC Server within our workstation container ##########
-
-#printf "\n%b\n" "Starting a VNC Server..."
-#docker exec -it -d $_wsID /bin/bash export USER=root
-#docker exec -it $_wsID /bin/bash
-#docker exec -it -d $_wsID vncserver :1
-#docker exec -it -d $_wsID /root/.vnc/xstartup
-
-
-########## Starting a VNC Session ###########
-
-#printf "\n%b\n" "Starting a VNC Session..."
-#vncviewer 192.168.0.3:5901
-
-
 ########## Cleaning up ##########
 
 function quit {
 printf "\n%b\n" "Clean up everything..."
 #docker stop $_gwID
-printf "\n%b" "Containers removed:" 
-echo "$(docker stop $(docker ps -a -q))"
+docker exec -it -e USER=root $_wsID su -c "vncserver -kill :2" root
+printf "\n%s\n" "Removing all containers..." 
+echo "$(docker stop $_gwID $_wsID)"
 #docker rm $(docker ps -a -q)
 printf "\n$white%b$transparent\n" "Bye bye.."
 sleep 2
