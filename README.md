@@ -61,7 +61,6 @@ Run the image, update the distro, install iptables & tor:
     $ apt-get dist-upgrade
         
     $ apt-get install tor iptables procps netcat
-    $ apt-get autoremove
     $ apt-get clean
     $ exit
 
@@ -85,13 +84,11 @@ Get an image for the Workstation. For example, Kali Linux for penetration testin
 Update and install the tools you would like to use (see
 [https://www.kali.org/news/kali-linux-metapackages/](https://www.kali.org/news/kali-linux-metapackages/))
 
-    $ docker run -it --privileged kalilinux/kali-linux-docker /bin/bash
+    $ docker run -it kalilinux/kali-linux-docker /bin/bash
     $ apt-get update
     $ apt-get dist-upgrade
-    $ apt-get autoremove
     
     $ apt install kali-linux-top10
-    $ apt-get clean
 
 Make sure the tightvncserver and curl packages are installed which is the case with most Kali Metapackages.
 
@@ -101,6 +98,7 @@ Make sure the tightvncserver and curl packages are installed which is the case w
 Install xfce4 for a graphical Desktop:
 
     $ apt-get install xfce4 
+    $ apt-get clean
     $ exit
 
 As with the Gateway, to make this permanent you have to create an image from that customized container. Each time you run dockernymous a new container is created and disposed on exit.
