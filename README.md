@@ -50,7 +50,7 @@ Dockernymous needs an up and running Docker environment and a non-default docker
 
     $ docker network create --driver=bridge --subnet=192.168.0.0/24 docker_internal
 
-**2. Gateway (Debian):**
+**2. Gateway (Alpine):**
 
 Get a (lightweight) gateway Image. For example Alpine!
 
@@ -58,7 +58,7 @@ Get a (lightweight) gateway Image. For example Alpine!
 
 Run the image, update the distro, install iptables & tor:
 
-    $ docker run -it alpine /bin/bash
+    $ docker run -it alpine /bin/sh
     $ apk add --update tor iptables iproute2
     $ exit
 

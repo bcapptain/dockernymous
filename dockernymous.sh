@@ -4,7 +4,7 @@
 #Gateway IP
 _gwIP=192.168.0.254 
 #Gateway name
-_gwName=alpine_gw
+_gwName=my_gateway
 #Workstation name 
 _wsName=my_workstation
 #Internal network name
@@ -108,13 +108,15 @@ while [ "$test" !=  "100%" ]
 do
 	docker exec -it $_gwID /bin/sh -c "cat log" >> log
 	test=$(tail -n1 log | awk '{ print $6 }' | cut -d':' -f1)
-	printf "%s\n" "Connection Status: $test"
-	sleep 0.5
+	printf "\033[K%s\r" "Connection Status: $test"
+	sleep 1
 	timeout+=1
-	if [ $timeout -eq 10 ]; then
-		printf "$yelloww%s\n" "[Connection timeout. Retry..]"
+	if [ $timeout -eq 20 ]; then
+		printf "$yellow%s$transparent\n" "[Connection timeout. Retry..]"
 		try+=1
 		docker exec -it -d $_gwID /bin/sh -c "pkill tor"
+	        sleep 2
+		docker exec -it -d $_gwID sh -c "tor > log"
 		sleep 2
 		timeout=0
 	fi
