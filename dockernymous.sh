@@ -136,9 +136,24 @@ _inc_if="eth1"
 _NON_TOR="192.168.0.0/24 172.18.0.0/16"
 docker exec -it $_gwID sh -c "iptables -F"
 docker exec -it $_gwID sh -c "iptables -t nat -F"
+
+###
+#The following iptable rules are recommendations from the Tor Project https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy
+
+#docker exec -it $_gwID sh -c "iptables -A OUTPUT -m conntrack --ctstate INVALID -j LOG --log-prefix 'Transproxy ctstate leak blocked: ' --log-uid"
+#docker exec -it $_gwID sh -c "iptables -A OUTPUT -m conntrack --ctstate INVALID -j DROP"
+docker exec -it $_gwID sh -c "iptables -A OUTPUT -m state --state INVALID -j LOG --log-prefix 'Transproxy state leak blocked: ' --log-uid"
+docker exec -it $_gwID sh -c "iptables -A OUTPUT -m state --state INVALID -j DROP"
+
+docker exec -it $_gwID sh -c "iptables -A OUTPUT ! -o lo ! -d 127.0.0.1 ! -s 127.0.0.1 -p tcp -m tcp --tcp-flags ACK,FIN ACK,FIN -j LOG --log-prefix 'Transproxy leak blocked: ' --log-uid"
+docker exec -it $_gwID sh -c "iptables -A OUTPUT ! -o lo ! -d 127.0.0.1 ! -s 127.0.0.1 -p tcp -m tcp --tcp-flags ACK,RST ACK,RST -j LOG --log-prefix 'Transproxy leak blocked: ' --log-uid"
+docker exec -it $_gwID sh -c "iptables -A OUTPUT ! -o lo ! -d 127.0.0.1 ! -s 127.0.0.1 -p tcp -m tcp --tcp-flags ACK,FIN ACK,FIN -j DROP"
+docker exec -it $_gwID sh -c "iptables -A OUTPUT ! -o lo ! -d 127.0.0.1 ! -s 127.0.0.1 -p tcp -m tcp --tcp-flags ACK,RST ACK,RST -j DROP"
+
 for NET in $NON_TOR; do
  	docker exec -it $_gwID sh -c "iptables -t nat -A PREROUTING -i $_inc_if -d $NET -j RETURN"
 done
+
 docker exec -it $_gwID sh -c "iptables -t nat -A PREROUTING -i $_inc_if -p udp --dport 53 -j REDIRECT --to-ports 53"
 docker exec -it $_gwID sh -c "iptables -t nat -A PREROUTING -i $_inc_if -p udp --dport 5353 -j REDIRECT --to-ports 53"
 docker exec -it $_gwID sh -c "iptables -t nat -A PREROUTING -i $_inc_if -p tcp --syn -j REDIRECT --to-ports $_trans_port"
