@@ -2,6 +2,10 @@
 Dockernymous is in a very early state of development. Only use it for educational purposes. 
 **DON'T use it if you rely on strong anonymity**!
 
+**News: Switched from Debian to Alpine as gateway image/container!**
+I changed the Docker image that is used as the gateway from Debian to Alpine!
+The resulting image size after configuration and commiting is now *23MB (Alpine) instead of 200MB (Debian)*!
+The configuration steps are updated below.
 
 ## **About:**
 
@@ -25,9 +29,8 @@ systems which aren't able to efficiently run two hardware  virtualized machines 
 - curl
 
 **Gateway Image:**
-- Linux (e.g. Debian)
+- Linux (e.g. Alpine, Debian )
 - tor
-- xtightvnc
 - procps
 - ncat
 - iptables
@@ -35,7 +38,7 @@ systems which aren't able to efficiently run two hardware  virtualized machines 
 **Workstation Image:**
  - Linux (e.g. Kali)
  - ‎xfce4
-
+ - xtightvnc
 
 ## Instructions:
 
@@ -49,19 +52,14 @@ Dockernymous needs an up and running Docker environment and a non-default docker
 
 **2. Gateway (Debian):**
 
-Get a (lightweight) gateway Image. For example Debian:
+Get a (lightweight) gateway Image. For example Alpine!
 
-    $ docker pull debian
+    $ docker pull alpine
 
 Run the image, update the distro, install iptables & tor:
 
-    $ docker run -it debian /bin/bash
-
-    $ apt-get update
-    $ apt-get dist-upgrade
-        
-    $ apt-get install tor iptables procps netcat
-    $ apt-get clean
+    $ docker run -it alpine /bin/bash
+    $ apk add --update tor iptables iproute2
     $ exit
 
 Feel free to further customize your gateway for your needs.
