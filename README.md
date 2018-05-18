@@ -27,9 +27,8 @@ The idea was to create a whonix-like setup (see [https://www.whonix.org](https:/
 systems which aren't able to efficiently run two hardware virtualized machines or don't have virtualization capacities at all.
 
 
-[dockernymous in action[/images/dckrnms3.png]]
+![dockernymous](https://raw.githubusercontent.com/wiki/bcapptain/dockernymous/images/dckrnms3.png?s=200)
 
-![](/images/dckrnms3.png =250x)
 
 ## **Requirements:**
 
