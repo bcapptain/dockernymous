@@ -50,6 +50,7 @@ systems which aren't able to efficiently run two hardware virtualized machines o
 ## Instructions:
 
 **1. Host**
+
 To clone the dockernymous repository type:
 
     git clone https://github.com/bcapptain/dockernymous.git
