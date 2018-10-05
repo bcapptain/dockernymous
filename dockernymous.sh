@@ -11,6 +11,8 @@ _wsName=my_workstation
 _intNW=docker_internal
 #Persistence (true/false)
 persistence=true
+#VNC Target resolution
+vncres="1366x768"
 
 #####Output Colors#############
 white="\033[1;37m"
@@ -67,6 +69,19 @@ if [ "$(docker ps -a | grep "$_gwName\|$_wsName")" != "" ]; then
 	docker rm $(docker ps -a | grep "$_gwName\|$_wsName" | awk '{ print$1 }') > /dev/null
 fi
 rm log 2> /dev/null
+
+#If we dont have an internet connection nothing makes sense at all...
+_clearip=$(curl --silent https://canihazip.com/s)
+
+## Check clear net IP ##
+if [[ $_clearip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+	    echo ""
+else
+        printf "$red%s$transparent\n" "[Error. Do we have at least an internet connection?!]"
+        
+        exit 1
+fi
+
 
 ########## Start a Containainer from the Gateway Image ##########
 
@@ -202,7 +217,7 @@ else
 fi
 
 
-
+##################################
 ########## Checking IP ###########
 function checkip {
 printf "\n$white%s$transparent\n" "Checking connection..."
@@ -225,6 +240,8 @@ if [[ $_torip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	if [ "$_clearip" != "$_torip" ]; then
 		printf "%s\n" "Workstation IP: $_torip"
 		printf "$green%s$transparent\n" "[Success!]"
+		sleep 3
+		return 5
 	else	
 		printf "$red%s$transparent\n" "[Worstation has your clearnet IP!]"
 		cleanup
@@ -232,13 +249,26 @@ if [[ $_torip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	fi
 else
 	printf "$red%s$transparent" "[Error getting an IP Adress!]"
-    echo $_torip
-	cleanup
-	exit 1
+    printf "\n%b\n" "Retry? Tor may needs some time to establish circuits!"
+    printf "%b" "Choice (y/n): "
+    read retry
+    if [[ $retry == "y" ]]; then
+			return 1
+	else 	cleanup
+			exit 1
+    fi
+    
+    
+	
 fi
 sleep 2
 }
-checkip
+
+while [[ "$?" != "5" ]]
+do
+	checkip
+done
+
 ############### MENU ########################
 revisit=0
 
@@ -279,7 +309,7 @@ function menu {
 				
 				if [ "$_checkvnc" = "" ]; then
 					#docker exec -it -e USER=root $_wsID vncpasswd
-					docker exec -it -e USER=root $_wsID su -c "vncserver :2" root
+					docker exec -it -e USER=root $_wsID su -c "vncserver :2 -geometry $vncres" root
 				fi
 				## We start the vncviewer in a seperate xterm because theres no way to run it in the background
 				xterm -e "vncviewer $_wsIP:2" &
@@ -299,7 +329,11 @@ function menu {
 			if [ "$choice" = "n" ]; then
 				printf "\n$white%s$transparent\n" "Getting new identity..."
 				docker exec -it $_gwID sh -c "(echo authenticate '""'; echo signal newnym; echo quit) | nc $_gwIP 9051"
-				checkip
+				while [[ "$?" != "0" ]]
+				do
+					checkip
+				done
+				
 				printf "\n%s" "Press any key..."
 				read p
 			fi
