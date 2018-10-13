@@ -1,9 +1,13 @@
-﻿**Warning:** 
+﻿**SCROLL DOWN FOR REQUIREMENTS AND INSTRUCTIONS**
+IT JUST WON'T WORK IF YOU DON'T FOLLOW THEM
+
+**Warning:** 
 Dockernymous is in a very early state of development. Only use it for educational purposes. 
 **DON'T use it if you rely on strong anonymity**!
 
 ## News
 [13.10.2018]
+
 I completely changed the overall function logic of the script hence there are improvements in 
 useability and stability. The look of the menu was improved.
 
@@ -23,6 +27,7 @@ Enjoy!
 Bcapptain
 
 [17.05.2018]
+
 Switched from Debian to Alpine as gateway image/container!
 
 ![https://github.com/alpinelinux](https://avatars2.githubusercontent.com/u/7600810?s=80&v=4)
