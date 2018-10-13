@@ -3,6 +3,25 @@ Dockernymous is in a very early state of development. Only use it for educationa
 **DON'T use it if you rely on strong anonymity**!
 
 ## News
+[13.10.2018]
+I completely changed the overall function logic of the script hence there are improvements in 
+useability and stability. The look of the menu was improved.
+
+These NEW function were added:
+
+1. Option to keep the containers running and restore them later:
+You now have the choice to keep the containers running on exiting. This of course
+will speed up the start time of the whole script.
+For privacy reasons I keep the containers "self destroyable", so if you manually stop them
+or reboot your system they are gone nevertheless.
+
+2. (Re)start TOR from menu
+
+3. Stop TOR from menu
+
+Enjoy! 
+Bcapptain
+
 [17.05.2018]
 Switched from Debian to Alpine as gateway image/container!
 
