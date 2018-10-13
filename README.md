@@ -1,8 +1,11 @@
 ﻿**SCROLL DOWN FOR REQUIREMENTS AND INSTRUCTIONS**
+
 IT JUST WON'T WORK IF YOU DON'T FOLLOW THEM
 
-**Warning:** 
+**Warning:**
+ 
 Dockernymous is in a very early state of development. Only use it for educational purposes. 
+
 **DON'T use it if you rely on strong anonymity**!
 
 ## News
