@@ -13,6 +13,8 @@ _intNW=docker_internal
 persistence=true
 #VNC Target resolution
 vncres="1366x768"
+#Get the name of the default terminal emulator
+term=$(ps -o comm= -p "$(($(ps -o ppid= -p "$(($(ps -o sid= -p "$$")))")))")
 
 #####Output Colors#############
 white="\033[1;37m"
@@ -31,7 +33,9 @@ _torSettings="VirtualAddrNetworkIPv4 10.192.0.0/10
 Log notice file /root/.tor/notices.log
 DataDirectory /root/.tor
 Log notice stdout
-SocksPort $_gwIP:9050
+SocksPort $_gwIP:9050 IsolateSOCKSAuth 
+SocksPolicy accept 192.168.0.0/24
+SocksPolicy reject *
 ControlPort $_gwIP:9051
 CookieAuthentication 1
 HashedControlPassword 16:0430F4846DCB79EB605DAB188CF619860A18B86C20D075B84CB97E0695
@@ -185,7 +189,7 @@ function ipt_rules {
 	#The following iptable rules are recommendations from the Tor Project https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy
 
 	#docker exec -it $_gwID sh -c "iptables -A OUTPUT -m conntrack --ctstate INVALID -j LOG --log-prefix 'Transproxy ctstate leak blocked: ' --log-uid"
-	#docker exec -it $_gwID sh -c "iptables -A OUTPUT -m conntrack --ctstate INVALID -j DROP"
+	docker exec -it $_gwID sh -c "iptables -A OUTPUT -m conntrack --ctstate INVALID -j DROP"
 	docker exec -it $_gwID sh -c "iptables -A OUTPUT -m state --state INVALID -j LOG --log-prefix 'Transproxy state leak blocked: ' --log-uid"
 	docker exec -it $_gwID sh -c "iptables -A OUTPUT -m state --state INVALID -j DROP"
 
@@ -200,7 +204,9 @@ function ipt_rules {
 
 	docker exec -it $_gwID sh -c "iptables -t nat -A PREROUTING -i $_inc_if -p udp --dport 53 -j REDIRECT --to-ports 53"
 	docker exec -it $_gwID sh -c "iptables -t nat -A PREROUTING -i $_inc_if -p udp --dport 5353 -j REDIRECT --to-ports 53"
-	docker exec -it $_gwID sh -c "iptables -t nat -A PREROUTING -i $_inc_if -p tcp --syn -j REDIRECT --to-ports $_trans_port"
+	#docker exec -it $_gwID sh -c "iptables -t nat -A PREROUTING -i $_inc_if -p tcp --syn -j REDIRECT --to-ports $_trans_port"
+	##exclude connections to the socket
+	docker exec -it $_gwID sh -c "iptables -t nat -A PREROUTING -i $_inc_if ! -d 192.168.0.254 -p tcp --syn -j REDIRECT --to-ports $_trans_port"
 	printf "$green%s$transparent\n" "[Success!]"
 	return 0
 }
@@ -229,6 +235,15 @@ function ws_start {
 	echo "IP: $_wsIP"
 	printf "$green%s$transparent\n" "[Success!]"
 
+	########## Set the gateway as nameserver ##########
+	printf "\n$white%s$transparent\n" "Setting the gateway as nameserver..."
+	docker exec -it -d $_wsID sh -c "echo nameserver $_gwIP > /etc/resolv.conf"
+	if [ "$?" = "0" ]; then
+			printf "$green%s$transparent\n" "[Success!]"
+	else 	printf "$red%s$transparent\n" "[Error!]"
+	fi
+	
+	
 
 	########## Set the gateway container as the workstation's default gateway ##########
 	printf "\n$white%s$transparent\n" "Setting default gateway of workstation..."
@@ -277,11 +292,7 @@ function checkip {
 		if [ "$_clearip" != "$_torip" ]; then
 			printf "%s\n" "Workstation IP: $_torip"
 			printf "$green%s$transparent\n" "[Success!]"
-			sleep 3
-			return 5
-		else	
-			printf "$red%s$transparent\n" "[Worstation has your clearnet IP!]"
-			
+			sleep 2
 			return 0
 		fi
 	else
@@ -309,17 +320,24 @@ function start_vnc {
 				fi
 				if [ "$_checkvnc" = "" ]; then
 					#docker exec -it -e USER=root $_wsID vncpasswd
+					docker exec -it -e USER=root $_wsID su -c "rm -rf /tmp/.X2-lock" root
 					docker exec -it -e USER=root $_wsID su -c "vncserver :2 -geometry $vncres" root
-					if [ "$?" = "1" ]; then
-						printf "$green%s$transparent" "[VNC-Server started]"
-						sleep 1
+					if [ "$?" = "0" ]; then
+							printf "$green%s$transparent\n" "[VNC-Server started]"
+							sleep 2
+					else	printf "$red%s$transparent\n" "[VNC-Server could not be started]"
+							sleep 2
+							return 1
 					fi
-				else 	printf "$green%s$transparent" "[Found running VNC-Server]"
-						sleep 1	
+						
+					
+				else 	printf "$green%s$transparent\n" "[Found running VNC-Server]"
+						
 				fi
-				## We start the vncviewer in a seperate xterm because theres no way to run it in the background
-				xterm -e "vncviewer $_wsIP:2" &
 				
+				
+				###Start the client###
+				vncviewer $_wsIP:2 &> /dev/null &								
 				#docker exec -it -e USER=root $_wsID su -c "vncserver -kill :2" root
 				return 0
 }
@@ -327,16 +345,21 @@ function start_vnc {
 function menu {
 	############### MENU ########################
 	clear
-	printf "$white%s$transparent\n" 					"Main Menu"
-	printf "$white%s$transparent\n" 					"---------------------------------------------------" 
-	printf "$blue%s\t$white%s\t%s$transparent\n" 		"[Workstation]" "Start a Terminal Session"	"(t)"
-	printf "$blue%s\t$white%s\t\t%s$transparent\n" 		"[Workstation]" "Start a VNC Session" 		"(v)"
-	printf "$yellow%s\t$white%s\t%s$transparent\n" 		"[Gateway]" "Start a Terminal Session" 		"(g)"
-	printf "$yellow%s\t$white%s\t\t\t%s$transparent\n" 	"[Gateway]" "(Re)Start Tor" 				"(s)"
-	printf "$yellow%s\t$white%s\t\t\t%s$transparent\n" 	"[Gateway]" "Stop Tor" 						"(x)"
-	printf "$yellow%s\t$white%s\t\t\t%s$transparent\n" 	"[Gateway]" "New Identity" 					"(n)"
-	printf "%s\t$white%s\t\t%s$transparent\n" 			"[System]" "Check Connection" 				"(c)"
-	printf "%s\t$white%s\t\t%s$transparent\n" 			"[System]" "Quit and clean up" 				"(q)" 
+	printf "$red%b\n" '       __           __                                                   '
+	printf "$red%b\n" '  ____/ /___  _____/ /_____  _________  __  ______ ___  ____  __  _______'
+	printf "$red%b\n" ' / __  / __ \/ ___/ //_/ _ \/ ___/ __ \/ / / / __ `__ \/ __ \/ / / / ___/'
+	printf "$red%b\n" '/ /_/ / /_/ / /__/ ,< /  __/ /  / / / / /_/ / / / / / / /_/ / /_/ (__  ) '
+	printf "$blue%b\n" '\__,_/\____/\___/_/|_|\___/_/  /_/ /_/\__, /_/ /_/ /_/\____/\__,_/____/  '
+	printf "$blue%b\n" '                                     /____/                              '
+	printf "$white%s$transparent\n" 					"-------------------------------------------------------------------------" 
+	printf "$blue%s\t$white%s\t\t%s$transparent\n" 		"[Workstation]" "Start a Terminal Session"	"(t)"
+	printf "$blue%s\t$white%s\t\t\t%s$transparent\n" 		"[Workstation]" "Start a VNC Session" 		"(v)"
+	printf "$yellow%s\t$white%s\t\t%s$transparent\n" 		"[Gateway]" "Start a Terminal Session" 		"(g)"
+	printf "$yellow%s\t$white%s\t\t\t\t%s$transparent\n" 	"[Gateway]" "(Re)Start Tor" 				"(s)"
+	printf "$yellow%s\t$white%s\t\t\t\t%s$transparent\n" 	"[Gateway]" "Stop Tor" 						"(x)"
+	printf "$yellow%s\t$white%s\t\t\t\t%s$transparent\n" 	"[Gateway]" "New Identity" 					"(n)"
+	printf "%s\t$white%s\t\t\t%s$transparent\n" 			"[System]" "Check Connection" 				"(c)"
+	printf "%s\t$white%s\t\t\t%s$transparent\n" 			"[System]" "Quit and clean up" 				"(q)" 
 	
 	
 	# return values: 1=reload menu, 0=exit menu
@@ -351,7 +374,7 @@ function menu {
 				clear
 				printf "$white%s$transparent\n" "Connecting to Workstation Terminal.. (type 'exit' to return to menu)"
 	        		sleep 1
-				docker exec -it -e USER=root $_wsID /bin/bash
+				$term -e "docker exec -it -e USER=root $_wsID /bin/bash" &> /dev/null &
 			    return 1
 			fi
 			## Start and connect workstation VNC
@@ -390,7 +413,7 @@ function menu {
 				clear
 				printf "$white%s$transparent\n" "Connecting to Gateway Terminal.. (type 'exit' to return to menu)"
 	        	sleep 1
-				docker exec -it -e USER=root $_gwID /bin/sh
+				$term -e "docker exec -it -e USER=root $_gwID /bin/sh"  &> /dev/null &
 			    return 1    
 			fi
 			
@@ -457,7 +480,7 @@ function norestore_logic {
 	done
 
 	checkip
-	while [[ "$?" != "5" ]]
+	while [[ "$?" != "0" ]]
 	do
 		checkip
 	done
@@ -483,6 +506,17 @@ function restore_logic {
 
 ### Program Logic aka sequence of function calls
 
+
+##Banner
+printf "$red%b\n" '       __           __                                                   '
+printf "$red%b\n" '  ____/ /___  _____/ /_____  _________  __  ______ ___  ____  __  _______'
+printf "$red%b\n" ' / __  / __ \/ ___/ //_/ _ \/ ___/ __ \/ / / / __ `__ \/ __ \/ / / / ___/'
+printf "$red%b\n" '/ /_/ / /_/ / /__/ ,< /  __/ /  / / / / /_/ / / / / / / /_/ / /_/ (__  ) '
+printf "$blue%b\n" '\__,_/\____/\___/_/|_|\___/_/  /_/ /_/\__, /_/ /_/ /_/\____/\__,_/____/  '
+printf "$blue%b\n" '                                     /____/                              '
+
+
+
 #Check wether there is a stored session of containers
 startupChecks
 if [ "$?" = "1" ]; then
@@ -494,7 +528,7 @@ if [ "$?" = "1" ]; then
 				##Get the Gateway ID because the menu needs the variable _gwID
 				if [ "$(docker ps -a | grep "my_gateway" | awk '{print $1}' | xargs)" != "" ]; then	
 						
-						_gwID=$(docker ps -a | grep "my_gateway" | awk '{print $1}' | xargs)
+						_gwID=$(docker ps -a | grep $_gwName | awk '{print $1}' | xargs)
 						printf "\n$green%s$transparent\n" "[Found gateway \"$_gwName\" with ID: $_gwID.]"
 						sleep 1
 				else 	printf "$yellow%s$transparent\n" "No Gateway with name $_gwName was found. Start one?"
@@ -508,7 +542,7 @@ if [ "$?" = "1" ]; then
 				fi
 				##Get the Workstation ID because the menu needs the variable _wsID
 				if [ "$(docker ps -a | grep "my_workstation" | awk '{print $1}' | xargs)" != "" ]; then	
-						_wsID=$(docker ps -a | grep "my_workstation" | awk '{print $1}' | xargs)
+						_wsID=$(docker ps -a | grep $_wsName | awk '{print $1}' | xargs)
 						printf "\n$green%s$transparent\n" "[Found workstation \"$_wsName\" with ID: $_wsID.]"
 						sleep 1
 				else 	printf "$yellow%s$transparent\n" "No Workstation with name $_wsName was found. Start one?"
