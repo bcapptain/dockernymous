@@ -2,10 +2,10 @@
 
 ###### Configuration #########
 #Gateway IP
-_gwIP=192.168.0.254 
+_gwIP=192.168.0.254
 #Gateway name
 _gwName=my_gateway
-#Workstation name 
+#Workstation name
 _wsName=my_workstation
 #Internal network name
 _intNW=docker_internal
@@ -33,16 +33,16 @@ _torSettings="VirtualAddrNetworkIPv4 10.192.0.0/10
 Log notice file /root/.tor/notices.log
 DataDirectory /root/.tor
 Log notice stdout
-SocksPort $_gwIP:9050 IsolateSOCKSAuth 
+SocksPort $_gwIP:9050 IsolateSOCKSAuth
 SocksPolicy accept 192.168.0.0/24
 SocksPolicy reject *
 ControlPort $_gwIP:9051
 CookieAuthentication 1
 HashedControlPassword 16:0430F4846DCB79EB605DAB188CF619860A18B86C20D075B84CB97E0695
 AutomapHostsOnResolve 1
-TransPort $_gwIP:9040 
+TransPort $_gwIP:9040
 DNSPort $_gwIP:53
-#UseBridges 1 
+#UseBridges 1
 #Bridge obfs4 185.163.45.31:8080 EC10BB3A20D7340E6CBDCFF7512E791FE5608CA2 cert=GscSlqpebDRkXrdHerr60Nbf3M1bzz5j3f2CDkp6KTvLDQPj577Zr+qGmrqLPgQcQqkhQA iat-mode=0
 #Bridge obfs4 35.176.30.153:9443 47E180E5FF5AE051F151A1344536FAA279C258E7 cert=BdDwSVjkvOg8CuCqRehfh8AT0p9S6FluJKB+9/BSabJxF8B7hFNMbfE2UBNKOjSA3gQWPw iat-mode=0
 #Bridge obfs4 45.79.220.128:9443 7645100FA563470B8DDB7AE43A44E5EADA3E0F7B cert=dKBeLjNQxjbDd3dT56nmrdkw5DmjMvI4tBBfp9uQ+6/cqmLskT0eXtKGh8mlxgdUMDVTPQ iat-mode=0"
@@ -56,7 +56,7 @@ function startupChecks {
 		printf "$red%s$transparent\n\n" "[This script needs to be run as root or with sudo.]"
 		exit 1
 	fi
-	
+
 	##	Is Docker Daemon running?
 	docker ps &> /dev/null
 	if [ $? -ne 0 ]; then
@@ -72,17 +72,17 @@ function startupChecks {
 			printf "$red%s$transparent\n\n" "[Error. Do we have at least an internet connection?!]"
 			exit 1
 	fi
-	
+
 	#If there are any stopped containers, return 1 (true) or 0 (false)
 	if [ "$(docker ps -a | grep "$_gwName\|$_wsName")" != "" ]; then
-			
+
 			return 1
 	else 	return 0
 	fi
-	
+
 	rm log &> /dev/null
 
-	
+
 	return 0
 }
 
@@ -95,12 +95,12 @@ function remove_container {
 function gw_start {
 	########## Start a Containainer from the Gateway Image ##########
 	printf "$white%s$transparent\n" "Starting a Gateway Container..."
-	_gwID=$(docker run -it --rm --privileged -d $_gwName) 
+	_gwID=$(docker run -it --rm --privileged -d $_gwName)
 
 	if [ "$_gwID" != "" ]; then
 		printf "%s\n" "Container started with ID: $_gwID"
 		printf "$green%s$transparent\n" "[Success!]"
-		
+
 	else
 		printf "\n$red%s$transparent\n" "[Error getting Container ID. See above errors!]"
 		return 1
@@ -150,8 +150,8 @@ function start_tor {
 			docker exec -it -d $_gwID sh -c "tor > log"
 			sleep 2
 			timeout=0
-			
-			
+
+
 		fi
 	done
 	printf "$green%s$transparent\n" "[Success!]"
@@ -164,7 +164,7 @@ function stop_tor {
 		docker exec -it -d $_gwID /bin/sh -c "pkill tor"
 		docker exec -it -d $_gwID /bin/sh -c "rm -rf /root/.tor"
 		docker exec -it -d $_gwID /bin/sh -c "rm -rf log"
-		
+
 		if [ "$(docker exec -it -d $_gwID /bin/sh -c "pgrep tor")" = "" ]; then
 				printf "$green%s$transparent\n" "[Success!]"
 		else	printf "$red%s$transparent\n" "[Stopping Tor was not successful!]"
@@ -242,8 +242,8 @@ function ws_start {
 			printf "$green%s$transparent\n" "[Success!]"
 	else 	printf "$red%s$transparent\n" "[Error!]"
 	fi
-	
-	
+
+
 
 	########## Set the gateway container as the workstation's default gateway ##########
 	printf "\n$white%s$transparent\n" "Setting default gateway of workstation..."
@@ -251,7 +251,7 @@ function ws_start {
 	docker exec -it -d $_wsID sh -c "ip route add default via $_gwIP"
 
 	## Check Gateway
-	_chkgwIP=$(docker exec -it $_wsID sh -c "ip route | head -n1 ") 
+	_chkgwIP=$(docker exec -it $_wsID sh -c "ip route | head -n1 ")
 	_chkgwIP=$(echo $_chkgwIP | awk '{ print $3 }')
 
 	if [[ "$_chkgwIP" = "$_gwIP" ]]; then
@@ -271,24 +271,24 @@ function checkip {
 	#Check if tor is running in gw container
 	if [ "$(docker exec -it $_gwID sh -c 'pgrep tor')" = "" ]; then
 			printf "$yellow%s$transparent\n" "[Tor is not running in gateway]"
-			return 0		
+			return 0
 	fi
-	
+
 	_torip=$(docker exec -it $_wsID sh -c "curl --silent https://canihazip.com/s")
 	_clearip=$(curl --silent https://canihazip.com/s)
 
 	## Check clear net IP ##
 	if [[ $_clearip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-		printf "%s\n" "Host IP: $_clearip"        
+		printf "%s\n" "Host IP: $_clearip"
 	else
 			printf "$red%s$transparent" "[Error. Do we have an Internet connection?]"
-			
+
 			return 0
 	fi
 
 	## Check public Container IP ##
 	if [[ $_torip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-		
+
 		if [ "$_clearip" != "$_torip" ]; then
 			printf "%s\n" "Workstation IP: $_torip"
 			printf "$green%s$transparent\n" "[Success!]"
@@ -304,9 +304,9 @@ function checkip {
 				return 1
 		else 	return 0
 		fi
-		
-		
-		
+
+
+
 	fi
 	sleep 2
 }
@@ -329,15 +329,15 @@ function start_vnc {
 							sleep 2
 							return 1
 					fi
-						
-					
+
+
 				else 	printf "$green%s$transparent\n" "[Found running VNC-Server]"
-						
+
 				fi
-				
-				
+
+
 				###Start the client###
-				vncviewer $_wsIP:2 &> /dev/null &								
+				vncviewer $_wsIP:2 &> /dev/null &
 				#docker exec -it -e USER=root $_wsID su -c "vncserver -kill :2" root
 				return 0
 }
@@ -351,7 +351,7 @@ function menu {
 	printf "$red%b\n" '/ /_/ / /_/ / /__/ ,< /  __/ /  / / / / /_/ / / / / / / /_/ / /_/ (__  ) '
 	printf "$blue%b\n" '\__,_/\____/\___/_/|_|\___/_/  /_/ /_/\__, /_/ /_/ /_/\____/\__,_/____/  '
 	printf "$blue%b\n" '                                     /____/                              '
-	printf "$white%s$transparent\n" 					"-------------------------------------------------------------------------" 
+	printf "$white%s$transparent\n" 					"-------------------------------------------------------------------------"
 	printf "$blue%s\t$white%s\t\t%s$transparent\n" 		"[Workstation]" "Start a Terminal Session"	"(t)"
 	printf "$blue%s\t$white%s\t\t\t%s$transparent\n" 		"[Workstation]" "Start a VNC Session" 		"(v)"
 	printf "$yellow%s\t$white%s\t\t%s$transparent\n" 		"[Gateway]" "Start a Terminal Session" 		"(g)"
@@ -359,11 +359,11 @@ function menu {
 	printf "$yellow%s\t$white%s\t\t\t\t%s$transparent\n" 	"[Gateway]" "Stop Tor" 						"(x)"
 	printf "$yellow%s\t$white%s\t\t\t\t%s$transparent\n" 	"[Gateway]" "New Identity" 					"(n)"
 	printf "%s\t$white%s\t\t\t%s$transparent\n" 			"[System]" "Check Connection" 				"(c)"
-	printf "%s\t$white%s\t\t\t%s$transparent\n" 			"[System]" "Quit and clean up" 				"(q)" 
-	
-	
+	printf "%s\t$white%s\t\t\t%s$transparent\n" 			"[System]" "Quit and clean up" 				"(q)"
+
+
 	# return values: 1=reload menu, 0=exit menu
-	
+
 	while [ "$choice" != "q" ]
 	do
 		printf "\n\n%s" ""
@@ -382,7 +382,7 @@ function menu {
 				clear
 				start_vnc
 				return 1
-			        
+
 			fi
 			## Check Connection
 			if [ "$choice" = "c" ]; then
@@ -396,7 +396,7 @@ function menu {
 				read p
 				return 1
 			fi
-			
+
 			## New identity via ControlPort
 			if [ "$choice" = "n" ]; then
 				printf "\n$white%s$transparent\n" "Getting new identity..."
@@ -406,32 +406,32 @@ function menu {
 				read p
 				return 1
 			fi
-			
-			
+
+
 			## connect to gateway terminal
 			if [ "$choice" = "g" ]; then
 				clear
 				printf "$white%s$transparent\n" "Connecting to Gateway Terminal.. (type 'exit' to return to menu)"
 	        	sleep 1
 				$term -e "docker exec -it -e USER=root $_gwID /bin/sh"  &> /dev/null &
-			    return 1    
+			    return 1
 			fi
-			
+
 			# (re) start tor
 			if [ "$choice" = "s" ]; then
 				start_tor
 				return 1
 			fi
-			
+
 			# stop tor
 			if [ "$choice" = "x" ]; then
 				stop_tor
 				return 1
 			fi
 
-	
+
 	done
-	
+
 	if [ "$choice" = "q" ]; then
 				printf "\n$white%s$transparent\n" "Do you want to keep the containers running?"
 	        	printf "%s" "Choice (y/n): "
@@ -443,15 +443,15 @@ function menu {
 							read stoptor
 							if [ "$stoptor" != "n" ]; then
 									stop_tor
-							fi 
-							
+							fi
+
 					else 	remove_container
 							return 0
-					fi 
+					fi
 	return 0
 	fi
-	
-	
+
+
 }
 
 function norestore_logic {
@@ -484,14 +484,14 @@ function norestore_logic {
 	do
 		checkip
 	done
-	
+
 	menu
 	while [[ "$?" == "1" ]]
 	do
 		menu
 	done
 	return 0
-	
+
 }
 
 function restore_logic {
@@ -501,7 +501,7 @@ function restore_logic {
 		menu
 	done
 	return 0
-	
+
 }
 
 ### Program Logic aka sequence of function calls
@@ -523,11 +523,11 @@ if [ "$?" = "1" ]; then
 		printf "\n$yellow%s$transparent\n" "Some containers were found. Try to restore session?"
 		printf "%b" "Choice (y/n):  "
 		read restore
-					
+
 		if [ "$restore" = "y" ]; then
 				##Get the Gateway ID because the menu needs the variable _gwID
-				if [ "$(docker ps -a | grep "my_gateway" | awk '{print $1}' | xargs)" != "" ]; then	
-						
+				if [ "$(docker ps -a | grep "my_gateway" | awk '{print $1}' | xargs)" != "" ]; then
+
 						_gwID=$(docker ps -a | grep $_gwName | awk '{print $1}' | xargs)
 						printf "\n$green%s$transparent\n" "[Found gateway \"$_gwName\" with ID: $_gwID.]"
 						sleep 1
@@ -538,10 +538,10 @@ if [ "$?" = "1" ]; then
 							gw_start
 							start_tor
 						fi
-							
+
 				fi
 				##Get the Workstation ID because the menu needs the variable _wsID
-				if [ "$(docker ps -a | grep "my_workstation" | awk '{print $1}' | xargs)" != "" ]; then	
+				if [ "$(docker ps -a | grep "my_workstation" | awk '{print $1}' | xargs)" != "" ]; then
 						_wsID=$(docker ps -a | grep $_wsName | awk '{print $1}' | xargs)
 						printf "\n$green%s$transparent\n" "[Found workstation \"$_wsName\" with ID: $_wsID.]"
 						sleep 1
@@ -550,16 +550,16 @@ if [ "$?" = "1" ]; then
 						read startws
 						if [ "$startws" = "y" ]; then
 							ws_start
-							
+
 						fi
 				fi
-								
+
 				restore_logic
-				
+
 		else	remove_container
 				norestore_logic
 		fi
-					
+
 else 	norestore_logic
 fi
 
